@@ -1,4 +1,4 @@
-import { test, expect } from "playwright-test-coverage";
+import { test, expect } from "./testSetup";
 import { Page } from "@playwright/test";
 
 async function basicInit(page: Page) {
@@ -22,10 +22,34 @@ async function basicInit(page: Page) {
 
   await page.route("*/**/api/order/menu", async (route) => {
     const menuRes = [
-      { id: 1, title: "Veggie", image: "pizza1.png", price: 0.0038, description: "A garden of delight" },
-      { id: 2, title: "Pepperoni", image: "pizza2.png", price: 0.0042, description: "Spicy treat" },
-      { id: 3, title: "Margarita", image: "pizza3.png", price: 0.0042, description: "Essential classic" },
-      { id: 4, title: "Crusty", image: "pizza4.png", price: 0.0028, description: "A dry mouthed favorite" },
+      {
+        id: 1,
+        title: "Veggie",
+        image: "pizza1.png",
+        price: 0.0038,
+        description: "A garden of delight",
+      },
+      {
+        id: 2,
+        title: "Pepperoni",
+        image: "pizza2.png",
+        price: 0.0042,
+        description: "Spicy treat",
+      },
+      {
+        id: 3,
+        title: "Margarita",
+        image: "pizza3.png",
+        price: 0.0042,
+        description: "Essential classic",
+      },
+      {
+        id: 4,
+        title: "Crusty",
+        image: "pizza4.png",
+        price: 0.0028,
+        description: "A dry mouthed favorite",
+      },
     ];
     expect(route.request().method()).toBe("GET");
     await route.fulfill({ json: menuRes });
@@ -145,7 +169,9 @@ test("purchase with login", async ({ page }) => {
   await page.getByRole("combobox").selectOption("1");
   await page.getByRole("link", { name: "Image Description Pepperoni" }).click();
   await page.getByRole("button", { name: "Checkout" }).click();
-  await page.getByRole("textbox", { name: "Email address" }).fill("test@test.com");
+  await page
+    .getByRole("textbox", { name: "Email address" })
+    .fill("test@test.com");
   await page.getByRole("textbox", { name: "Password" }).fill("test");
   await page.getByRole("button", { name: "Login" }).click();
   await page.getByRole("button", { name: "Pay now" }).click();
