@@ -5,6 +5,7 @@ import {
   Store,
   OrderHistory,
   User,
+  UserList,
   Menu,
   Order,
   Endpoints,
@@ -64,6 +65,19 @@ class HttpPizzaService implements PizzaService {
     );
     localStorage.setItem("token", token);
     return Promise.resolve(user);
+  }
+  async getUsers(
+    page: number = 0,
+    limit: number = 10,
+    nameFilter: string = "*",
+  ): Promise<UserList> {
+    return this.callEndpoint(
+      `/api/user?page=${page}&limit=${limit}&name=${nameFilter}`,
+    );
+  }
+
+  async deleteUser(user: User): Promise<void> {
+    return this.callEndpoint(`/api/user/${user.id}`, "DELETE");
   }
 
   async login(email: string, password: string): Promise<User> {

@@ -62,6 +62,11 @@ type User = {
   roles?: UserRole[];
 };
 
+type UserList = {
+  users: User[];
+  more: boolean;
+};
+
 type Store = {
   id: string;
   name: string;
@@ -99,6 +104,8 @@ type JWTPayload = {
 };
 
 interface PizzaService {
+  getUsers(page: number, limit: number, nameFilter: string): Promise<UserList>;
+  deleteUser(user: User): Promise<void>;
   login(email: string, password: string): Promise<User>;
   register(email: string, password: string, role: string): Promise<User>;
   logout(): void;
@@ -125,6 +132,7 @@ export {
   Role,
   PizzaService,
   User,
+  UserList,
   Menu,
   Pizza,
   OrderHistory,

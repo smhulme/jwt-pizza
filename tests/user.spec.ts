@@ -33,3 +33,117 @@ test("updateUser", async ({ page }) => {
 
   await expect(page.getByRole("main")).toContainText("pizza dinerx");
 });
+
+test("admin can list, filter, and delete users", async ({ page }) => {
+  let users = [
+    {
+      id: 4,
+      name: "Admin User",
+      email: "a@jwt.com",
+      roles: [{ role: "admin" }],
+    },
+    {
+      id: 3,
+      name: "Kai Chen",
+      email: "d@jwt.com",
+      roles: [{ role: "diner" }],
+    },
+  ];
+
+  await page.route("*/**/api/user/me", async (route) => {
+    await route.fulfill({
+      json: {
+        id: 4,
+        name: "Admin User",
+        email: "a@jwt.com",
+        roles: [{ role: "admin" }],
+      },
+    });
+  });
+
+  await page.route("*/**/api/franchise*", async (route) => {
+    await route.fulfill({ json: { franchises: [], more: false } });
+  });
+
+  await page.route("*/**/api/user/*", async (route) => {
+    if (route.request().url().includes("/api/user/me")) {
+      return route.fallback();
+    }
+    if (route.request().method() === "DELETE") {
+      const url = new URL(route.request().url());
+      const parts = url.pathname.split("/");
+      const idToDelete = Number(parts[parts.length - 1]);
+      users = users.filter((u) => u.id !== idToDelete);
+      await route.fulfill({ json: { message: "user deleted" } });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route("*/**/api/user?*", async (route) => {
+    const url = new URL(route.request().url());
+    const nameFilter = url.searchParams.get("name") || "*";
+
+    if (route.request().method() === "GET") {
+      let filtered = users;
+      if (nameFilter !== "*") {
+        const cleanFilter = nameFilter.replace(/\*/g, "");
+        filtered = users.filter((u) => u.name.includes(cleanFilter));
+      }
+      await route.fulfill({ json: { users: filtered, more: false } });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route("*/**/api/auth", async (route) => {
+    if (route.request().method() === "PUT") {
+      await route.fulfill({
+        json: {
+          user: {
+            id: 4,
+            name: "Admin User",
+            email: "a@jwt.com",
+            roles: [{ role: "admin" }],
+          },
+          token: "admin-token",
+        },
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  page.on("dialog", async (dialog) => {
+    await dialog.accept();
+  });
+
+  // 1. Login as admin
+  await page.goto("/");
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
+  await page.getByRole("textbox", { name: "Password" }).fill("admin");
+  await page.getByRole("button", { name: "Login" }).click();
+
+  // 2. Navigate to Admin Dashboard
+  await page.getByRole("link", { name: "Admin" }).click();
+  await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
+
+  // 3. Verify user list displays "Kai Chen"
+  await expect(page.getByRole("main")).toContainText("Kai Chen");
+
+  // 4. Test filtering users
+  const filterInput = page.getByPlaceholder("Filter users");
+  await filterInput.fill("Kai");
+  await page.getByRole("button", { name: "Submit" }).nth(1).click();
+  await expect(page.getByRole("main")).toContainText("Kai Chen");
+
+  // 5. Test deleting user (confirm prompt will be accepted by listener)
+  const userRow = page.locator("tr", { hasText: "Kai Chen" });
+  await userRow.getByRole("button", { name: "Delete" }).click();
+
+  // Verify user is removed from table
+  await expect(page.locator("tr", { hasText: "Kai Chen" })).toHaveCount(0);
+});
+
+

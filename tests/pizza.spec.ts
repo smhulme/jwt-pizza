@@ -129,6 +129,37 @@ async function basicInit(page: Page) {
       },
     });
   });
+
+  await page.route("*/**/api/user*", async (route) => {
+    if (route.request().url().includes("/api/user/me")) {
+      return route.fallback();
+    }
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        json: {
+          users: [
+            {
+              id: 4,
+              name: "Admin User",
+              email: "a@jwt.com",
+              roles: [{ role: "admin" }],
+            },
+            {
+              id: 3,
+              name: "Kai Chen",
+              email: "d@jwt.com",
+              roles: [{ role: "diner" }],
+            },
+          ],
+          more: false,
+        },
+      });
+    } else if (route.request().method() === "DELETE") {
+      await route.fulfill({ json: { message: "user deleted" } });
+    } else {
+      await route.continue();
+    }
+  });
 }
 
 test("home page", async ({ page }) => {
