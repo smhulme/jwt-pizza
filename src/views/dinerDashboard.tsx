@@ -18,8 +18,10 @@ export default function DinerDashboard(props: Props) {
   const nameRef = React.useRef<HTMLInputElement>(null);
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
+  const [updateError, setUpdateError] = React.useState<string | null>(null);
 
   async function updateUser() {
+    setUpdateError(null);
     let updatedUser: User = {
       id: user.id,
       name: nameRef.current?.value,
@@ -28,12 +30,15 @@ export default function DinerDashboard(props: Props) {
       roles: user.roles,
     };
 
-    await pizzaService.updateUser(updatedUser);
-
-    props.setUser(updatedUser);
-    setTimeout(() => {
-      HSOverlay.close(document.getElementById("hs-jwt-modal")!);
-    }, 100);
+    try {
+      await pizzaService.updateUser(updatedUser);
+      props.setUser(updatedUser);
+      setTimeout(() => {
+        HSOverlay.close(document.getElementById("hs-jwt-modal")!);
+      }, 100);
+    } catch (e: any) {
+      setUpdateError(e.message || "Failed to update user");
+    }
   }
 
   React.useEffect(() => {
@@ -66,9 +71,10 @@ export default function DinerDashboard(props: Props) {
         <Button
           title="Edit"
           className="w-16 p-0"
-          onPress={() =>
-            HSOverlay.open(document.getElementById("hs-jwt-modal")!)
-          }
+          onPress={() => {
+            setUpdateError(null);
+            HSOverlay.open(document.getElementById("hs-jwt-modal")!);
+          }}
         />
 
         <div className="my-4 text-lg text-orange-200 text-start grid grid-cols-5 gap-2">
@@ -174,11 +180,20 @@ export default function DinerDashboard(props: Props) {
                 type="button"
                 className="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none"
                 data-hs-overlay="#hs-jwt-modal"
+                onClick={() => setUpdateError(null)}
               >
                 <CloseIcon className="" />
               </button>
             </div>
             <div className="p-4 overflow-y-scroll max-h-52">
+              {updateError && (
+                <div
+                  role="alert"
+                  className="p-2 mb-2 bg-red-100 border border-red-400 text-red-700 text-sm rounded-md"
+                >
+                  {updateError}
+                </div>
+              )}
               <div className="my-4 text-lg text-start grid grid-cols-5 gap-2 items-center">
                 <div className="font-semibold">name:</div>
                 <input
@@ -199,6 +214,7 @@ export default function DinerDashboard(props: Props) {
                   id="password"
                   type="text"
                   className="col-span-4 border border-gray-300 rounded-md p-1"
+                  placeholder="Leave blank if not changing"
                   defaultValue=""
                   ref={passwordRef}
                 />

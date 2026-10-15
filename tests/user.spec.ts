@@ -2,6 +2,52 @@ import { test, expect } from "playwright-test-coverage";
 
 test("updateUser", async ({ page }) => {
   const email = `user${Math.floor(Math.random() * 10000)}@jwt.com`;
+  let user = {
+    id: 1,
+    name: "pizza diner",
+    email: email,
+    roles: [{ role: "diner" }],
+  };
+
+  await page.route("*/**/api/auth", async (route) => {
+    const method = route.request().method();
+    if (method === "POST" || method === "PUT") {
+      await route.fulfill({
+        json: {
+          user,
+          token: "diner-token",
+        },
+      });
+    } else if (method === "DELETE") {
+      await route.fulfill({
+        json: { message: "logout successful" },
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route("*/**/api/user/*", async (route) => {
+    if (route.request().method() === "PUT") {
+      const data = route.request().postDataJSON();
+      user = { ...user, ...data };
+      await route.fulfill({
+        json: {
+          user,
+          token: "diner-token",
+        },
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.route("*/**/api/order*", async (route) => {
+    await route.fulfill({
+      json: { orders: [], more: false },
+    });
+  });
+
   await page.goto("/");
   await page.getByRole("link", { name: "Register" }).click();
   await page.getByRole("textbox", { name: "Full name" }).fill("pizza diner");
@@ -114,10 +160,6 @@ test("admin can list, filter, and delete users", async ({ page }) => {
     }
   });
 
-  page.on("dialog", async (dialog) => {
-    await dialog.accept();
-  });
-
   // 1. Login as admin
   await page.goto("/");
   await page.getByRole("link", { name: "Login" }).click();
@@ -138,9 +180,14 @@ test("admin can list, filter, and delete users", async ({ page }) => {
   await page.getByRole("button", { name: "Submit" }).nth(1).click();
   await expect(page.getByRole("main")).toContainText("Kai Chen");
 
-  // 5. Test deleting user (confirm prompt will be accepted by listener)
+  // 5. Test deleting user with confirmation modal
   const userRow = page.locator("tr", { hasText: "Kai Chen" });
   await userRow.getByRole("button", { name: "Delete" }).click();
+
+  // Confirm delete modal appears and confirm button is clicked
+  const confirmModal = page.locator("#confirm-delete-user-modal");
+  await expect(confirmModal).toBeVisible();
+  await confirmModal.getByRole("button", { name: "Confirm" }).click();
 
   // Verify user is removed from table
   await expect(page.locator("tr", { hasText: "Kai Chen" })).toHaveCount(0);

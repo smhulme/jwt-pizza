@@ -13,6 +13,8 @@ import {
   UserList,
 } from "../service/pizzaService";
 import { TrashIcon } from "../icons";
+import ConfirmModal from "../components/confirmModal";
+import { HSOverlay } from "preline";
 
 interface Props {
   user: User | null;
@@ -32,6 +34,7 @@ export default function AdminDashboard(props: Props) {
   });
   const [userPage, setUserPage] = React.useState(0);
   const filterUserRef = React.useRef<HTMLInputElement>(null);
+  const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
 
   React.useEffect(() => {
     (async () => {
@@ -39,10 +42,16 @@ export default function AdminDashboard(props: Props) {
     })();
   }, [props.user, userPage]);
 
-  async function deleteUser(user: User) {
-    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-      await pizzaService.deleteUser(user);
+  function promptDeleteUser(user: User) {
+    setUserToDelete(user);
+    HSOverlay.open(document.getElementById("confirm-delete-user-modal")!);
+  }
+
+  async function confirmDeleteUser() {
+    if (userToDelete) {
+      await pizzaService.deleteUser(userToDelete);
       setUserList(await pizzaService.getUsers(userPage, 10, "*"));
+      setUserToDelete(null);
     }
   }
 
@@ -269,7 +278,7 @@ export default function AdminDashboard(props: Props) {
                               <button
                                 type="button"
                                 className="px-2 py-1 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-1 border-orange-400 text-orange-400 hover:border-orange-800 hover:text-orange-800"
-                                onClick={() => deleteUser(u)}
+                                onClick={() => promptDeleteUser(u)}
                               >
                                 <TrashIcon />
                                 Delete
@@ -332,6 +341,15 @@ export default function AdminDashboard(props: Props) {
             onPress={createFranchise}
           />
         </div>
+
+        <ConfirmModal
+          id="confirm-delete-user-modal"
+          title="Delete User"
+          message={`Are you sure you want to delete ${userToDelete?.name}?`}
+          confirmText="Confirm"
+          onConfirm={confirmDeleteUser}
+          onCancel={() => setUserToDelete(null)}
+        />
       </View>
     );
   }
