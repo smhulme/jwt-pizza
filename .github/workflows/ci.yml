@@ -61,3 +61,18 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-production:
+    needs: build
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    env:
+      version: ${{ needs.build.outputs.version }}
+    environment:
+      name: production
+      url: https://pizza.smhulme.click
+    steps:
+      - name: Deploy to production
+        run: |
+          echo "Deploying version ${{ env.version }} to production..."
