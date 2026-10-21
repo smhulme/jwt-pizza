@@ -55,6 +55,8 @@ jobs:
           npx nyc check-coverage --lines 80
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: production
     steps:
       - name: Create OIDC token to AWS
         uses: aws-actions/configure-aws-credentials@v6.3.0
