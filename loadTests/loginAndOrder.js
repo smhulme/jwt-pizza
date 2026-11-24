@@ -154,6 +154,15 @@ export function scenario_1() {
         },
       },
     );
+    if (
+      !check(response, {
+        "purchase status equals 200": (response) =>
+          response.status.toString() === "200",
+      })
+    ) {
+      console.log(response.body);
+      fail("Purchase was *not* 200");
+    }
 
     vars["jwt"] = jsonpath.query(response.json(), "$.jwt")[0];
 
